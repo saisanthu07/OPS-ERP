@@ -1,102 +1,124 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
-const { v4: uuidv4 } = require('uuid');
 const prisma = require('../services/prisma');
 const { protect } = require('../middleware/auth');
-const { requireRole, restrictToAssignedLocation } = require('../middleware/roles');
-const { AppError } = require('../middleware/errorHandler');
+const { requireRole } = require('../middleware/roles');
 
 const router = express.Router();
-
-function validate(req, res, next) {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
-  next();
-}
-
 router.use(protect);
 
 router.get('/', async (req, res, next) => {
   try {
-    const filter = {};
-    if (req.query.location) filter.location = req.query.location;
-    if (req.query.item) filter.item = req.query.item;
-    const items = await prisma.inventory.findMany({ where: filter, orderBy: { item: 'asc' } });
-    res.json({ items });
+    const { search, page = 1, limit = 20 } = req.query;
+    
+    let filter = {};
+    if (search) {
+      filter = {
+        OR: [
+          { item: { contains: search, mode: 'insensitive' } },
+          { location: { contains: search, mode: 'insensitive' } },
+          { category: { contains: search, mode: 'insensitive' } }
+        ]
+      };
+    }
+
+    const skip = (Number(page) - 1) * Number(limit);
+    const take = Number(limit);
+
+    const [items, total] = await Promise.all([
+      prisma.inventory.findMany({ where: filter, orderBy: { item: 'asc' }, skip, take }),
+      prisma.inventory.count({ where: filter })
+    ]);
+
+    res.json({
+      items,
+      meta: {
+        total,
+        page: Number(page),
+        limit: take,
+        totalPages: Math.ceil(total / take)
+      }
+    });
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/', requireRole('ADMIN', 'OPERATIONS'), restrictToAssignedLocation('location'), [
-  body('item').trim().notEmpty(),
-  body('category').trim().notEmpty(),
-  body('location').trim().notEmpty(),
-  body('batch').trim().notEmpty(),
-  body('physicalQty').isFloat({ gt: 0 }),
-  body('idempotencyKey').optional().isString(),
-], validate, async (req, res, next) => {
+router.post('/', requireRole('ADMIN', 'OPERATIONS'), async (req, res, next) => {
   try {
-    const { item, category, location, batch, physicalQty } = req.body;
-    const qty = Number(physicalQty);
-    const idempotencyKey = req.body.idempotencyKey || uuidv4();
-
-    const result = await prisma.$transaction(async (tx) => {
+    const { item, category, location, batch, physicalQty, idempotencyKey } = req.body;
+    
+    await prisma.$transaction(async (tx) => {
       const existingTx = await tx.inventoryTransaction.findUnique({ where: { idempotencyKey } });
-      if (existingTx) return tx.inventory.findUnique({ where: { item_location_batch: { item, location, batch } } });
+      if (existingTx) return; 
 
-      const inv = await tx.inventory.upsert({
-        where: { item_location_batch: { item, location, batch } },
-        update: { physicalQty: { increment: qty } },
-        create: { item, category, location, batch, physicalQty: qty }
+      let inv = await tx.inventory.findUnique({
+        where: { item_location_batch: { item, location, batch } }
       });
+
+      if (inv) {
+        inv = await tx.inventory.update({
+          where: { id: inv.id },
+          data: { physicalQty: { increment: physicalQty } }
+        });
+      } else {
+        inv = await tx.inventory.create({
+          data: { item, category, location, batch, physicalQty }
+        });
+      }
 
       await tx.inventoryTransaction.create({
-        data: { idempotencyKey, type: 'STOCK_IN', inventoryId: inv.id, quantity: qty, performedById: req.user.id }
+        data: {
+          idempotencyKey,
+          type: 'STOCK_IN',
+          inventoryId: inv.id,
+          quantity: physicalQty,
+          performedById: req.user.id
+        }
       });
-
-      return inv;
     });
 
-    res.status(201).json({ message: 'Stock added successfully', inventory: result });
+    res.status(201).json({ message: 'Inventory updated' });
   } catch (err) {
     next(err);
   }
 });
 
-router.post('/:id/damage', requireRole('ADMIN', 'OPERATIONS'), [
-  body('quantity').isFloat({ gt: 0 }),
-  body('idempotencyKey').optional().isString(),
-], validate, async (req, res, next) => {
+router.post('/:id/damage', requireRole('ADMIN', 'OPERATIONS'), async (req, res, next) => {
   try {
-    const { quantity } = req.body;
-    const qty = Number(quantity);
-    const idempotencyKey = req.body.idempotencyKey || uuidv4();
-
-    const invId = req.params.id;
-
-    const result = await prisma.$transaction(async (tx) => {
+    const { quantity, idempotencyKey } = req.body;
+    
+    await prisma.$transaction(async (tx) => {
       const existingTx = await tx.inventoryTransaction.findUnique({ where: { idempotencyKey } });
-      if (existingTx) return tx.inventory.findUnique({ where: { id: invId } });
+      if (existingTx) return;
 
-      const inv = await tx.inventory.findUnique({ where: { id: invId } });
-      if (!inv) throw new AppError('Inventory not found', 404);
-      if (inv.physicalQty - inv.reservedQty < qty) throw new AppError('Cannot damage more than unreserved physical quantity', 400);
+      const inv = await tx.inventory.findUnique({ where: { id: req.params.id } });
+      if (!inv) throw new Error('Inventory not found');
 
-      const updated = await tx.inventory.update({
-        where: { id: invId },
-        data: { physicalQty: { decrement: qty } }
+      if (inv.physicalQty - inv.reservedQty < quantity) {
+        throw new Error('Insufficient available quantity to mark as damaged');
+      }
+
+      await tx.inventory.update({
+        where: { id: inv.id },
+        data: { physicalQty: { decrement: quantity } }
       });
 
       await tx.inventoryTransaction.create({
-        data: { idempotencyKey, type: 'DAMAGE', inventoryId: inv.id, quantity: -qty, performedById: req.user.id }
+        data: {
+          idempotencyKey,
+          type: 'DAMAGE',
+          inventoryId: inv.id,
+          quantity,
+          performedById: req.user.id
+        }
       });
-
-      return updated;
     });
 
-    res.json({ message: 'Damaged stock recorded', inventory: result });
+    res.json({ message: 'Damage recorded' });
   } catch (err) {
+    if (err.message.includes('Insufficient')) {
+      return res.status(400).json({ message: err.message });
+    }
     next(err);
   }
 });

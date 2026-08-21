@@ -7,16 +7,12 @@ import Inventory from './pages/Inventory.jsx';
 import WorkOrders from './pages/WorkOrders.jsx';
 import Transfers from './pages/Transfers.jsx';
 import Orders from './pages/Orders.jsx';
+import Users from './pages/Users.jsx';
 import Terms from './pages/Terms.jsx';
 import Privacy from './pages/Privacy.jsx';
 
 function ProtectedRoute({ children, roles }) {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center text-zinc-500 dark:text-zinc-500 dark:text-zinc-400">Loading session…</div>
-    );
-  }
+  const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) {
     return <Navigate to="/inventory" replace />;
@@ -25,7 +21,8 @@ function ProtectedRoute({ children, roles }) {
 }
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  if (loading) return <div className="p-10">Loading...</div>;
 
   return (
     <Routes>
@@ -43,6 +40,7 @@ export default function App() {
         <Route path="work-orders" element={<WorkOrders />} />
         <Route path="transfers" element={<Transfers />} />
         <Route path="orders" element={<Orders />} />
+        <Route path="users" element={user?.role === 'ADMIN' ? <Users /> : <Navigate to="/inventory" replace />} />
       </Route>
       <Route path="/terms" element={<Terms />} />
       <Route path="/privacy" element={<Privacy />} />
