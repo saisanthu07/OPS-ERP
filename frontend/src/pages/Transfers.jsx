@@ -127,9 +127,10 @@ export default function Transfers() {
       )}
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-100 dark:bg-[#0f0f11] text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 text-xs uppercase">
-            <tr>
+        <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
+          <table className="w-full text-sm">
+            <thead className="bg-zinc-100 dark:bg-[#0f0f11] text-zinc-500 dark:text-zinc-500 dark:text-zinc-400 text-xs uppercase sticky top-0 z-10 shadow-sm">
+              <tr>
               <th className="text-left px-4 py-3">Transfer</th>
               <th className="text-left px-4 py-3">Item / Batch</th>
               <th className="text-left px-4 py-3">Route</th>
@@ -169,7 +170,8 @@ export default function Transfers() {
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
 
       {receiveTarget && (
