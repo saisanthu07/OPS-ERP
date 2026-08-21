@@ -64,11 +64,18 @@ router.post('/:id/dispatch', requireRole('ADMIN', 'OPERATIONS'), async (req, res
       const existingTx = await tx.inventoryTransaction.findUnique({ where: { idempotencyKey } });
       if (existingTx) return transfer;
 
-      const inv = await tx.inventory.findUnique({
-        where: { item_location_batch: { item: transfer.item, location: transfer.sourceLocation, batch: transfer.batch } }
-      });
+      const lockedInvArray = await tx.$queryRaw`
+        SELECT * FROM "Inventory" 
+        WHERE "item" = ${transfer.item} AND "location" = ${transfer.sourceLocation} AND "batch" = ${transfer.batch} 
+        FOR UPDATE
+      `;
 
-      if (!inv || inv.physicalQty - inv.reservedQty < transfer.quantity) {
+      if (!lockedInvArray || lockedInvArray.length === 0) {
+        throw new AppError('Not enough available stock to dispatch this transfer', 400);
+      }
+
+      const inv = lockedInvArray[0];
+      if (inv.physicalQty - inv.reservedQty < transfer.quantity) {
         throw new AppError('Not enough available stock to dispatch this transfer', 400);
       }
 

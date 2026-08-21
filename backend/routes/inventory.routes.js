@@ -91,9 +91,12 @@ router.post('/:id/damage', requireRole('ADMIN', 'OPERATIONS'), async (req, res, 
       const existingTx = await tx.inventoryTransaction.findUnique({ where: { idempotencyKey } });
       if (existingTx) return;
 
-      const inv = await tx.inventory.findUnique({ where: { id: req.params.id } });
-      if (!inv) throw new Error('Inventory not found');
+      const lockedInvArray = await tx.$queryRaw`
+        SELECT * FROM "Inventory" WHERE id = ${req.params.id} FOR UPDATE
+      `;
+      if (!lockedInvArray || lockedInvArray.length === 0) throw new Error('Inventory not found');
 
+      const inv = lockedInvArray[0];
       if (inv.physicalQty - inv.reservedQty < quantity) {
         throw new Error('Insufficient available quantity to mark as damaged');
       }

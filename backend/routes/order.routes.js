@@ -63,9 +63,20 @@ router.post('/', requireRole('ADMIN', 'SALES'), restrictToAssignedLocation('loca
         });
       }
 
-      // Concurrency locking (in a real prod environment you might use raw SQL FOR UPDATE here, but we check available logic)
-      const inv = await tx.inventory.findUnique({ where: { item_location_batch: { item, location, batch } } });
-      if (!inv || inv.physicalQty - inv.reservedQty < qty) {
+      // PostgreSQL Row-Level Lock: prevent race conditions by locking this specific inventory row
+      // until the transaction completes. This guarantees sequential evaluation of physical vs reserved.
+      const lockedInvArray = await tx.$queryRaw`
+        SELECT * FROM "Inventory" 
+        WHERE "item" = ${item} AND "location" = ${location} AND "batch" = ${batch} 
+        FOR UPDATE
+      `;
+      
+      if (!lockedInvArray || lockedInvArray.length === 0) {
+        throw new AppError('Cannot reserve more than the available inventory quantity.', 400);
+      }
+
+      const inv = lockedInvArray[0];
+      if (inv.physicalQty - inv.reservedQty < qty) {
         throw new AppError('Cannot reserve more than the available inventory quantity.', 400);
       }
 
