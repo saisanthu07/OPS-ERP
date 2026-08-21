@@ -60,7 +60,7 @@ export default function WorkOrders() {
     setError('');
     setSuccess('');
     try {
-      await api.patch(`/work-orders/${id}/status`, { status });
+      await api.post(`/work-orders/${id}/status`, { status });
       setSuccess('Status updated.');
       load();
     } catch (err) {

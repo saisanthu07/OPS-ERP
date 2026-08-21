@@ -152,4 +152,51 @@ router.post('/:id/cancel', requireRole('ADMIN', 'SALES'), async (req, res, next)
   }
 });
 
+router.post('/:id/fulfill', requireRole('ADMIN', 'SALES'), async (req, res, next) => {
+  try {
+    const orderId = req.params.id;
+    const idempotencyKey = req.body.idempotencyKey || uuidv4();
+
+    const fulfilledOrder = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new AppError('Order not found', 404);
+      if (order.status !== 'RESERVED') throw new AppError('Only reserved orders can be fulfilled', 400);
+
+      const existingTx = await tx.inventoryTransaction.findUnique({ where: { idempotencyKey } });
+      if (existingTx) return order;
+
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: 'FULFILLED' }
+      });
+
+      const inv = await tx.inventory.findUnique({
+        where: { item_location_batch: { item: order.item, location: order.location, batch: order.batch } }
+      });
+
+      if (inv) {
+        await tx.inventory.update({
+          where: { id: inv.id },
+          data: { 
+            reservedQty: { decrement: order.quantity },
+            physicalQty: { decrement: order.quantity }
+          }
+        });
+        await tx.inventoryTransaction.create({
+          data: {
+            idempotencyKey, type: 'RESERVATION_RELEASE', inventoryId: inv.id, quantity: -order.quantity,
+            performedById: req.user.id, reference: { orderId: order.id }
+          }
+        });
+      }
+
+      return updatedOrder;
+    });
+
+    res.json({ message: 'Order fulfilled', order: fulfilledOrder });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

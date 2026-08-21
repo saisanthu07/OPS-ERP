@@ -41,7 +41,7 @@ export default function Transfers() {
     setSuccess('');
     setSubmitting(true);
     try {
-      await api.post('/transfers', { ...form, quantity: Number(form.quantity) });
+      await api.post('/transfers/request', { ...form, quantity: Number(form.quantity) });
       setForm(emptyForm);
       setSuccess('Transfer requested.');
       load();
