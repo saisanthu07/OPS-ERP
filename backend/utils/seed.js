@@ -7,10 +7,13 @@ async function seed() {
   try {
     logger.info('Connected for seeding...');
 
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash('Password@123', salt);
+
     const users = [
-      { name: 'Alice Admin', email: 'admin@opserp.com', password: 'Admin@12345', role: 'ADMIN' },
-      { name: 'Oscar Operations', email: 'ops@opserp.com', password: 'Ops@12345', role: 'OPERATIONS', assignedLocation: 'Warehouse-A' },
-      { name: 'Sara Sales', email: 'sales@opserp.com', password: 'Sales@12345', role: 'SALES', assignedLocation: 'Warehouse-A' },
+      { name: 'Ananya Sharma', email: 'admin@opserp.com', password: 'Admin@12345', role: 'ADMIN' },
+      { name: 'Rohan Patel', email: 'ops@opserp.com', password: 'Ops@12345', role: 'OPERATIONS', assignedLocation: 'Warehouse-A' },
+      { name: 'Priya Gupta', email: 'sales@opserp.com', password: 'Sales@12345', role: 'SALES', assignedLocation: 'Warehouse-A' },
     ];
 
     for (const u of users) {
