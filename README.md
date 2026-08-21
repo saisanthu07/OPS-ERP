@@ -88,7 +88,92 @@ first write. Key indexes:
 - `WorkOrder.workOrderCode`, `Transfer.transferCode`, `Order.orderCode`: unique
 - `User.email`: unique
 
-See [`docs/ER-DIAGRAM.md`](./docs/ER-DIAGRAM.md) for the full schema and design rationale.
+See `ER-DIAGRAM.md` for the full schema and design rationale.
+
+```mermaid
+erDiagram
+    USER {
+        ObjectId _id PK
+        string name
+        string email UK
+        string passwordHash
+        string role "ADMIN | OPERATIONS | SALES"
+        string assignedLocation "nullable"
+        boolean isActive
+        number refreshTokenVersion
+    }
+
+    INVENTORY {
+        ObjectId _id PK
+        string item
+        string category
+        string location
+        string batch
+        number physicalQty
+        number reservedQty
+        number availableQty "virtual = physicalQty - reservedQty"
+    }
+
+    INVENTORY_TRANSACTION {
+        ObjectId _id PK
+        string idempotencyKey UK
+        string type "STOCK_IN | DAMAGE | TRANSFER_DISPATCH | TRANSFER_RECEIPT | RESERVATION | RESERVATION_RELEASE"
+        ObjectId inventory FK
+        number quantity "signed: +in / -out"
+        ObjectId performedBy FK
+        mixed reference "e.g. { transferId, orderId }"
+    }
+
+    WORK_ORDER {
+        ObjectId _id PK
+        string workOrderCode UK
+        string location
+        string item
+        number requiredQty
+        ObjectId assignedUser FK
+        ObjectId createdBy FK
+        string status "ASSIGNED | IN_PROGRESS | COMPLETED"
+        number stockCheck_availableAtLocation
+        number stockCheck_shortage
+    }
+
+    TRANSFER {
+        ObjectId _id PK
+        string transferCode UK
+        string sourceLocation
+        string destinationLocation
+        string item
+        string batch
+        number quantity
+        number quantityReceived
+        string status "REQUESTED | DISPATCHED | RECEIVED_PARTIAL | RECEIVED"
+        ObjectId requestedBy FK
+        ObjectId dispatchedBy FK
+        ObjectId receivedBy FK
+        ObjectId workOrder FK "nullable"
+    }
+
+    ORDER {
+        ObjectId _id PK
+        string orderCode UK
+        string customerName
+        string item
+        string location
+        string batch
+        number quantity
+        string status "RESERVED | FULFILLED | CANCELLED"
+        ObjectId createdBy FK
+        ObjectId cancelledBy FK
+    }
+
+    USER ||--o{ WORK_ORDER : "assignedUser"
+    USER ||--o{ WORK_ORDER : "createdBy"
+    USER ||--o{ TRANSFER : "requestedBy / dispatchedBy / receivedBy"
+    USER ||--o{ ORDER : "createdBy / cancelledBy"
+    USER ||--o{ INVENTORY_TRANSACTION : "performedBy"
+    INVENTORY ||--o{ INVENTORY_TRANSACTION : "logs changes to"
+    WORK_ORDER ||--o{ TRANSFER : "may trigger"
+```
 
 ---
 
