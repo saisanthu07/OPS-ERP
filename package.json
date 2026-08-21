@@ -1,0 +1,28 @@
+{
+  "name": "ops-erp",
+  "version": "1.0.0",
+  "description": "A production-oriented full-stack Operations ERP covering:",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "postinstall": "npm run install:all && cd backend && npx prisma generate",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "build": "npm run build --prefix frontend",
+    "seed": "npm run seed --prefix backend"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/saisanthu07/OPS-ERP.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/saisanthu07/OPS-ERP/issues"
+  },
+  "homepage": "https://github.com/saisanthu07/OPS-ERP#readme",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

@@ -197,10 +197,11 @@ standard Node/Express hosting (Render, Railway, EC2, a container, etc.).
 
 1. Make sure you have a PostgreSQL database running and `DATABASE_URL` is set.
 2. `cd backend && npx prisma db push` (to sync your schema).
-3. `cd backend && node utils/seed-demo.js` (optional: populates dummy data).
-4. `cd backend && npm run dev`.
-5. `cd frontend && npm run dev`.
-6. Visit `http://localhost:5173` and log in.
+3. 
+pm run install:all (installs both frontend and backend dependencies).
+4. 
+pm run dev (starts BOTH the backend server and frontend Vite app concurrently).
+5. Visit http://localhost:5173 and log in.
 
 ---
 
@@ -321,24 +322,23 @@ single commit, per the assignment's git history requirement.
 
 ## 13. Deploying to Vercel
 
-This repository is optimized for Vercel deployment by splitting it into two separate projects (Backend and Frontend).
+This repository is optimized for a **single-click Vercel deployment** (monorepo structure).
 
-### Deploying the Backend
 1. Go to Vercel and **Add New Project**.
 2. Import this repository.
-3. Set the **Root Directory** to ackend.
-4. In **Environment Variables**, add:
-   - DATABASE_URL (your PostgreSQL connection string)
-   - JWT_ACCESS_SECRET
-   - JWT_REFRESH_SECRET
-   - CLIENT_URL (set this to your frontend URL once deployed, for CORS)
-5. Click **Deploy**. Vercel will use the ackend/api/index.js serverless function and ercel.json routing automatically.
-
-### Deploying the Frontend
-1. Go to Vercel and **Add New Project**.
-2. Import this repository again.
-3. Set the **Root Directory** to rontend.
-4. Vercel will automatically detect Vite.
+3. Keep the **Root Directory** as the repository root (do not change it).
+4. Expand the **Build and Output Settings** section:
+   - **Build Command:** \
+pm run build\
+   - **Output Directory:** \rontend/dist\
+   - **Install Command:** \
+pm run install:all\
 5. In **Environment Variables**, add:
-   - VITE_API_URL (set this to your newly deployed backend URL, e.g., https://my-backend.vercel.app/api)
-6. Click **Deploy**. Vercel will build the SPA and route it correctly.
+   - \DATABASE_URL\ (your PostgreSQL connection string)
+   - \JWT_ACCESS_SECRET\
+   - \JWT_REFRESH_SECRET\
+   - \VITE_API_URL\ (set this to your Vercel URL, e.g., \https://your-app.vercel.app/api\)
+6. Click **Deploy**. 
+
+Vercel will build the React SPA, serve it from the root, and seamlessly wrap the Express backend via the \pi/index.js\ serverless function!
+
