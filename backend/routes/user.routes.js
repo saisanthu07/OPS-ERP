@@ -42,16 +42,23 @@ router.post('/', async (req, res, next) => {
 
 router.put('/:id', async (req, res, next) => {
   try {
-    const { role, isActive } = req.body;
+    const { name, email, role, assignedLocation, isActive, password } = req.body;
     
     // Prevent admin from disabling themselves
     if (req.params.id === req.user.id && isActive === false) {
       return res.status(400).json({ message: 'You cannot disable your own account' });
     }
 
+    const data = { name, email, role, assignedLocation, isActive };
+    
+    if (password && password.trim() !== '') {
+      const salt = await bcrypt.genSalt(10);
+      data.passwordHash = await bcrypt.hash(password, salt);
+    }
+
     await prisma.user.update({
       where: { id: req.params.id },
-      data: { role, isActive }
+      data
     });
     res.json({ message: 'User updated' });
   } catch (err) {
