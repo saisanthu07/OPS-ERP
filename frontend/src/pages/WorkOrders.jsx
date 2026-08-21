@@ -71,7 +71,7 @@ export default function WorkOrders() {
   const rerunStockCheck = async (id) => {
     setError('');
     try {
-      await api.get(`/work-orders/${id}/stock-check`);
+      await api.post(`/work-orders/${id}/check-shortage`);
       load();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to run stock check');
@@ -148,9 +148,9 @@ export default function WorkOrders() {
                 <td className="px-4 py-3">{wo.location}</td>
                 <td className="px-4 py-3">{wo.item}</td>
                 <td className="px-4 py-3 text-right">{wo.requiredQty}</td>
-                <td className="px-4 py-3 text-right">{wo.stockCheck?.availableAtLocation ?? '—'}</td>
-                <td className={`px-4 py-3 text-right font-semibold ${wo.stockCheck?.shortage > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  {wo.stockCheck?.shortage ?? 0}
+                <td className="px-4 py-3 text-right">{wo.stockCheck_availableAtLocation ?? '—'}</td>
+                <td className={`px-4 py-3 text-right font-semibold ${wo.stockCheck_shortage > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                  {wo.stockCheck_shortage ?? 0}
                 </td>
                 <td className="px-4 py-3 text-zinc-500 dark:text-zinc-500 dark:text-zinc-400">{wo.assignedUser?.name}</td>
                 <td className="px-4 py-3"><StatusBadge status={wo.status} /></td>

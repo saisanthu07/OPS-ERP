@@ -12,7 +12,16 @@ import Terms from './pages/Terms.jsx';
 import Privacy from './pages/Privacy.jsx';
 
 function ProtectedRoute({ children, roles }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-white dark:bg-[#0f0f11]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-indigo-500 dark:border-zinc-800"></div>
+      </div>
+    );
+  }
+  
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) {
     return <Navigate to="/inventory" replace />;
@@ -21,8 +30,7 @@ function ProtectedRoute({ children, roles }) {
 }
 
 export default function App() {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="p-10">Loading...</div>;
+  const { user } = useAuth();
 
   return (
     <Routes>
