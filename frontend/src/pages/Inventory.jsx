@@ -60,7 +60,7 @@ export default function Inventory() {
     setError('');
     setSuccess('');
     try {
-      await api.post(`/inventory/${damageTarget._id}/damage`, {
+      await api.post(`/inventory/${damageTarget.id}/damage`, {
         quantity: Number(damageQty),
         idempotencyKey: crypto.randomUUID(),
       });
@@ -135,14 +135,14 @@ export default function Inventory() {
               <tr><td colSpan={8} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">No inventory records yet.</td></tr>
             )}
             {items.map((it) => (
-              <tr key={it._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
+              <tr key={it.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
                 <td className="px-4 py-3 font-medium">{it.item}</td>
                 <td className="px-4 py-3 text-zinc-500 dark:text-zinc-500 dark:text-zinc-400">{it.category}</td>
                 <td className="px-4 py-3 text-zinc-500 dark:text-zinc-500 dark:text-zinc-400">{it.location}</td>
                 <td className="px-4 py-3 text-zinc-500 dark:text-zinc-500 dark:text-zinc-400">{it.batch}</td>
                 <td className="px-4 py-3 text-right">{it.physicalQty}</td>
                 <td className="px-4 py-3 text-right">{it.reservedQty}</td>
-                <td className="px-4 py-3 text-right font-semibold text-emerald-400">{it.availableQty}</td>
+                <td className="px-4 py-3 text-right font-semibold text-emerald-400">{(it.availableQty ?? (it.physicalQty - it.reservedQty))}</td>
                 {canManage && (
                   <td className="px-4 py-3 text-right">
                     <button className="text-xs text-rose-400 hover:text-rose-300" onClick={() => setDamageTarget(it)}>

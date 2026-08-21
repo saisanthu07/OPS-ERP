@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String   @id @default(uuid())
+  name                String
+  email               String   @unique
+  passwordHash        String
+  role                Role
+  assignedLocation    String?
+  isActive            Boolean  @default(true)
+  refreshTokenVersion Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  assignedWorkOrders      WorkOrder[] @relation("AssignedUser")
+  createdWorkOrders       WorkOrder[] @relation("CreatedWorkOrder")
+  requestedTransfers      Transfer[]  @relation("RequestedTransfer")
+  dispatchedTransfers     Transfer[]  @relation("DispatchedTransfer")
+  receivedTransfers       Transfer[]  @relation("ReceivedTransfer")
+  createdOrders           Order[]     @relation("CreatedOrder")
+  cancelledOrders         Order[]     @relation("CancelledOrder")
+  performedInventoryTxns  InventoryTransaction[]
+}
+
+enum Role {
+  ADMIN
+  OPERATIONS
+  SALES
+}
+
+model Inventory {
+  id          String   @id @default(uuid())
+  item        String
+  category    String
+  location    String
+  batch       String
+  physicalQty Float    @default(0)
+  reservedQty Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  transactions InventoryTransaction[]
+
+  @@unique([item, location, batch])
+}
+
+model InventoryTransaction {
+  id             String   @id @default(uuid())
+  idempotencyKey String   @unique
+  type           TransactionType
+  inventoryId    String
+  quantity       Float
+  performedById  String
+  reference      Json?    // Stores { transferId, orderId }
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  inventory   Inventory @relation(fields: [inventoryId], references: [id])
+  performedBy User      @relation(fields: [performedById], references: [id])
+}
+
+enum TransactionType {
+  STOCK_IN
+  DAMAGE
+  TRANSFER_DISPATCH
+  TRANSFER_RECEIPT
+  RESERVATION
+  RESERVATION_RELEASE
+}
+
+model WorkOrder {
+  id                             String   @id @default(uuid())
+  workOrderCode                  String   @unique
+  location                       String
+  item                           String
+  requiredQty                    Float
+  assignedUserId                 String
+  createdById                    String
+  status                         WorkOrderStatus @default(ASSIGNED)
+  stockCheck_availableAtLocation Float    @default(0)
+  stockCheck_shortage            Float    @default(0)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+
+  assignedUser User       @relation("AssignedUser", fields: [assignedUserId], references: [id])
+  createdBy    User       @relation("CreatedWorkOrder", fields: [createdById], references: [id])
+  transfers    Transfer[]
+}
+
+enum WorkOrderStatus {
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model Transfer {
+  id                  String   @id @default(uuid())
+  transferCode        String   @unique
+  sourceLocation      String
+  destinationLocation String
+  item                String
+  batch               String
+  quantity            Float
+  quantityReceived    Float    @default(0)
+  status              TransferStatus @default(REQUESTED)
+  requestedById       String
+  dispatchedById      String?
+  receivedById        String?
+  workOrderId         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  requestedBy  User       @relation("RequestedTransfer", fields: [requestedById], references: [id])
+  dispatchedBy User?      @relation("DispatchedTransfer", fields: [dispatchedById], references: [id])
+  receivedBy   User?      @relation("ReceivedTransfer", fields: [receivedById], references: [id])
+  workOrder    WorkOrder? @relation(fields: [workOrderId], references: [id])
+}
+
+enum TransferStatus {
+  REQUESTED
+  DISPATCHED
+  RECEIVED_PARTIAL
+  RECEIVED
+}
+
+model Order {
+  id           String   @id @default(uuid())
+  orderCode    String   @unique
+  customerName String
+  item         String
+  location     String
+  batch        String
+  quantity     Float
+  status       OrderStatus @default(RESERVED)
+  createdById  String
+  cancelledById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdBy   User  @relation("CreatedOrder", fields: [createdById], references: [id])
+  cancelledBy User? @relation("CancelledOrder", fields: [cancelledById], references: [id])
+}
+
+enum OrderStatus {
+  RESERVED
+  FULFILLED
+  CANCELLED
+}

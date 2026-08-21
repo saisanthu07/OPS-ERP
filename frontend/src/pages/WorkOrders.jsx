@@ -111,7 +111,7 @@ export default function WorkOrders() {
             <select required className="input" value={form.assignedUser} onChange={(e) => setForm({ ...form, assignedUser: e.target.value })}>
               <option value="">Select…</option>
               {users.map((u) => (
-                <option key={u._id} value={u._id}>{u.name}</option>
+                <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
           </div>
@@ -142,7 +142,7 @@ export default function WorkOrders() {
               <tr><td colSpan={9} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">No work orders yet.</td></tr>
             )}
             {workOrders.map((wo) => (
-              <tr key={wo._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
+              <tr key={wo.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
                 <td className="px-4 py-3 font-mono text-xs">{wo.workOrderCode}</td>
                 <td className="px-4 py-3">{wo.location}</td>
                 <td className="px-4 py-3">{wo.item}</td>
@@ -154,13 +154,13 @@ export default function WorkOrders() {
                 <td className="px-4 py-3 text-zinc-500 dark:text-zinc-500 dark:text-zinc-400">{wo.assignedUser?.name}</td>
                 <td className="px-4 py-3"><StatusBadge status={wo.status} /></td>
                 <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
-                  <button className="text-xs text-zinc-200 hover:text-white" onClick={() => rerunStockCheck(wo._id)}>
+                  <button className="text-xs text-zinc-200 hover:text-white" onClick={() => rerunStockCheck(wo.id)}>
                     Re-check
                   </button>
                   {(isAdmin || isOps) && nextStatus[wo.status] && (
                     <button
                       className="text-xs text-emerald-400 hover:text-emerald-300"
-                      onClick={() => updateStatus(wo._id, nextStatus[wo.status])}
+                      onClick={() => updateStatus(wo.id, nextStatus[wo.status])}
                     >
                       Mark {nextStatus[wo.status].replace('_', ' ')}
                     </button>

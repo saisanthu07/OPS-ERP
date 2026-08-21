@@ -138,7 +138,7 @@ export default function Orders() {
               <tr><td colSpan={7} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">No orders yet.</td></tr>
             )}
             {orders.map((o) => (
-              <tr key={o._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
+              <tr key={o.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
                 <td className="px-4 py-3 font-mono text-xs">{o.orderCode}</td>
                 <td className="px-4 py-3">{o.customerName}</td>
                 <td className="px-4 py-3">{o.item} <span className="text-zinc-500 dark:text-zinc-400">/ {o.batch}</span></td>
@@ -149,10 +149,10 @@ export default function Orders() {
                   <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                     {o.status === 'RESERVED' && (
                       <>
-                        <button className="text-xs text-emerald-400 hover:text-emerald-300" onClick={() => fulfill(o._id)}>
+                        <button className="text-xs text-emerald-400 hover:text-emerald-300" onClick={() => fulfill(o.id)}>
                           Fulfill
                         </button>
-                        <button className="text-xs text-rose-400 hover:text-rose-300" onClick={() => cancel(o._id)}>
+                        <button className="text-xs text-rose-400 hover:text-rose-300" onClick={() => cancel(o.id)}>
                           Cancel
                         </button>
                       </>

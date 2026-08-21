@@ -74,7 +74,7 @@ export default function Transfers() {
     setError('');
     setSuccess('');
     try {
-      await api.post(`/transfers/${receiveTarget._id}/receive`, {
+      await api.post(`/transfers/${receiveTarget.id}/receive`, {
         quantity: Number(receiveQty),
         idempotencyKey: crypto.randomUUID(),
       });
@@ -145,7 +145,7 @@ export default function Transfers() {
               <tr><td colSpan={7} className="px-4 py-6 text-center text-zinc-500 dark:text-zinc-400">No transfers yet.</td></tr>
             )}
             {transfers.map((t) => (
-              <tr key={t._id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
+              <tr key={t.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/40">
                 <td className="px-4 py-3 font-mono text-xs">{t.transferCode}</td>
                 <td className="px-4 py-3">{t.item} <span className="text-zinc-500 dark:text-zinc-400">/ {t.batch}</span></td>
                 <td className="px-4 py-3 text-zinc-500 dark:text-zinc-500 dark:text-zinc-400">{t.sourceLocation} → {t.destinationLocation}</td>
@@ -155,7 +155,7 @@ export default function Transfers() {
                 {canManage && (
                   <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                     {t.status === 'REQUESTED' && (
-                      <button className="text-xs text-zinc-200 hover:text-white" onClick={() => dispatch(t._id)}>
+                      <button className="text-xs text-zinc-200 hover:text-white" onClick={() => dispatch(t.id)}>
                         Dispatch
                       </button>
                     )}

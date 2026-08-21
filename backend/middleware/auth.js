@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const prisma = require('../services/prisma');
 
 async function protect(req, res, next) {
   try {
@@ -19,7 +19,7 @@ async function protect(req, res, next) {
       return res.status(401).json({ message: 'Invalid or expired token.' });
     }
 
-    const user = await User.findById(decoded.sub);
+    const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
     if (!user || !user.isActive) {
       return res.status(401).json({ message: 'User no longer exists or is inactive.' });
     }

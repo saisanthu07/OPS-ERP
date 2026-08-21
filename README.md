@@ -4,7 +4,7 @@ A production-oriented full-stack Operations ERP covering:
 
 **Inventory → Work Order → Stock Check → Internal Transfer / Shortage → Customer Reservation**
 
-Built as a MERN application (MongoDB, Express, React, Node.js) with JWT auth,
+Built as a PERN application (PostgreSQL, Express, React, Node.js) with JWT auth,
 role-based authorization, atomic/transactional inventory logic, and an idempotency
 layer to protect against duplicate/retried requests.
 
@@ -14,12 +14,12 @@ layer to protect against duplicate/retried requests.
 
 **Backend**
 - Node.js + Express
-- MongoDB + Mongoose (requires a replica set for multi-document transactions)
+- PostgreSQL + Prisma ORM (hosted on Supabase)
 - JWT (access token + rotating httpOnly-cookie refresh token)
 - bcryptjs for password hashing
-- helmet, cors, express-mongo-sanitize, hpp, express-rate-limit for hardening
+- helmet, cors, hpp, express-rate-limit for hardening
 - express-validator for request validation
-- Jest + Supertest + mongodb-memory-server for tests
+- Jest + Supertest + prisma test environment for tests
 - swagger-ui-express for interactive API docs
 
 **Frontend**
@@ -44,13 +44,13 @@ layer to protect against duplicate/retried requests.
   ```
 
   Alternatively, use a free MongoDB Atlas cluster (Atlas clusters are replica sets
-  by default) and drop its connection string into `MONGO_URI`.
+  by default) and drop its connection string into `DATABASE_URL`.
 
 ### Backend
 
 ```bash
 cd backend
-cp .env.example .env      # edit MONGO_URI and JWT secrets
+cp .env.example .env      # edit DATABASE_URL and JWT secrets
 npm install
 npm run seed               # creates demo Admin/Operations/Sales users + sample inventory
 npm run dev                # starts on http://localhost:5000
@@ -93,7 +93,7 @@ See `ER-DIAGRAM.md` for the full schema and design rationale.
 ```mermaid
 erDiagram
     USER {
-        ObjectId _id PK
+        String id PK
         string name
         string email UK
         string passwordHash
@@ -104,7 +104,7 @@ erDiagram
     }
 
     INVENTORY {
-        ObjectId _id PK
+        String id PK
         string item
         string category
         string location
@@ -115,30 +115,30 @@ erDiagram
     }
 
     INVENTORY_TRANSACTION {
-        ObjectId _id PK
+        String id PK
         string idempotencyKey UK
         string type "STOCK_IN | DAMAGE | TRANSFER_DISPATCH | TRANSFER_RECEIPT | RESERVATION | RESERVATION_RELEASE"
-        ObjectId inventory FK
+        String inventory FK
         number quantity "signed: +in / -out"
-        ObjectId performedBy FK
+        String performedBy FK
         mixed reference "e.g. { transferId, orderId }"
     }
 
     WORK_ORDER {
-        ObjectId _id PK
+        String id PK
         string workOrderCode UK
         string location
         string item
         number requiredQty
-        ObjectId assignedUser FK
-        ObjectId createdBy FK
+        String assignedUser FK
+        String createdBy FK
         string status "ASSIGNED | IN_PROGRESS | COMPLETED"
         number stockCheck_availableAtLocation
         number stockCheck_shortage
     }
 
     TRANSFER {
-        ObjectId _id PK
+        String id PK
         string transferCode UK
         string sourceLocation
         string destinationLocation
@@ -147,14 +147,14 @@ erDiagram
         number quantity
         number quantityReceived
         string status "REQUESTED | DISPATCHED | RECEIVED_PARTIAL | RECEIVED"
-        ObjectId requestedBy FK
-        ObjectId dispatchedBy FK
-        ObjectId receivedBy FK
-        ObjectId workOrder FK "nullable"
+        String requestedBy FK
+        String dispatchedBy FK
+        String receivedBy FK
+        String workOrder FK "nullable"
     }
 
     ORDER {
-        ObjectId _id PK
+        String id PK
         string orderCode UK
         string customerName
         string item
@@ -162,8 +162,8 @@ erDiagram
         string batch
         number quantity
         string status "RESERVED | FULFILLED | CANCELLED"
-        ObjectId createdBy FK
-        ObjectId cancelledBy FK
+        String createdBy FK
+        String cancelledBy FK
     }
 
     USER ||--o{ WORK_ORDER : "assignedUser"
@@ -186,7 +186,7 @@ erDiagram
 | `NODE_ENV` | `development` / `production` / `test` |
 | `PORT` | API port (default 5000) |
 | `CLIENT_URL` | Frontend origin, used for CORS (default `http://localhost:5173`) |
-| `MONGO_URI` | MongoDB connection string — **must point at a replica set** |
+| `DATABASE_URL` | MongoDB connection string — **must point at a replica set** |
 | `JWT_ACCESS_SECRET` | Secret for signing short-lived access tokens |
 | `JWT_REFRESH_SECRET` | Secret for signing refresh tokens (different from access secret) |
 | `JWT_ACCESS_EXPIRES` | e.g. `15m` |
@@ -200,7 +200,7 @@ erDiagram
 | `VITE_API_URL` | Base URL of the backend API, e.g. `http://localhost:5000/api` |
 
 The business logic itself has **no hard dependency on any specific hosting
-provider** — it only needs a MongoDB replica set reachable via `MONGO_URI` and
+provider** — it only needs a PostgreSQL database reachable via `DATABASE_URL` and
 standard Node/Express hosting (Render, Railway, EC2, a container, etc.).
 
 ---
@@ -222,12 +222,12 @@ cd backend
 npm test
 ```
 
-Tests use `mongodb-memory-server` to spin up a real, ephemeral single-node MongoDB
+Tests use `prisma test environment` to spin up a real, ephemeral single-node MongoDB
 replica set per test run — no external database needed, and no test pollutes another.
 
 > **Note on this submission's sandbox:** the automated test suite was written and
 > syntax/logic-verified in this environment, but could not be *executed* here because
-> `mongodb-memory-server` needs to download a `mongod` binary from `fastdl.mongodb.org`,
+> `prisma test environment` needs to download a `mongod` binary from `fastdl.mongodb.org`,
 > which this particular sandbox's network egress list doesn't include. It will run
 > normally with `npm test` on a machine with normal internet access (and does not
 > require your own MongoDB instance — the memory server handles that).
@@ -294,14 +294,13 @@ scenario without changing default behavior for anyone else.
 ## 10. Business Logic Highlights
 
 - **Available Quantity** is always `physicalQty - reservedQty`, computed as a
-  Mongoose virtual — never stored, so it can't drift out of sync.
+  computed field — never stored, so it can't drift out of sync.
 - **Negative inventory, invalid quantity, and reservation-beyond-available** are
-  all rejected by atomic, guarded MongoDB updates (see `docs/ER-DIAGRAM.md` for
+  all rejected by atomic PostgreSQL transactions with row-level safety (see `docs/ER-DIAGRAM.md` for
   the exact pattern) — not application-level read-then-write checks, so they're
   safe under real concurrency.
 - **Duplicate inventory transactions** are prevented via a required
-  `idempotencyKey` on every mutating request, enforced with a unique index on
-  `InventoryTransaction.idempotencyKey`.
+  `idempotencyKey` on every mutating request, enforced with a unique constraint on `idempotencyKey`.
 - **Work Order shortage** is computed automatically as
   `max(0, requiredQty - availableAtLocation)` at creation, and can be re-run
   on demand (e.g. after a transfer completes).
@@ -341,3 +340,4 @@ This repository is delivered as a complete snapshot for review. When pushing to
 your own Git remote, commit in logical increments (models → auth → inventory →
 work orders → transfers → orders → frontend → tests → docs) rather than as a
 single commit, per the assignment's git history requirement.
+

@@ -43,9 +43,9 @@ export default function App() {
         <Route path="work-orders" element={<WorkOrders />} />
         <Route path="transfers" element={<Transfers />} />
         <Route path="orders" element={<Orders />} />
-        <Route path="terms" element={<Terms />} />
-        <Route path="privacy" element={<Privacy />} />
       </Route>
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
       <Route path="*" element={<Navigate to="/inventory" replace />} />
     </Routes>
   );

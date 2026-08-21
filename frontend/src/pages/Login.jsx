@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useTheme } from '../hooks/useTheme.js';
 import Alert from '../components/Alert.jsx';
 
 export default function Login() {
   const { login } = useAuth();
+  const [isDark, setIsDark] = useTheme();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,7 +29,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-[#141416] transition-colors px-4">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-[#141416] transition-colors px-4 relative">
+      <button onClick={() => setIsDark(!isDark)} className="absolute top-6 right-6 w-10 h-10 rounded-md bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 flex items-center justify-center text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
+        {isDark ? (
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        )}
+      </button>
+
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-8">
           <div className="w-12 h-12 rounded-lg bg-zinc-900 dark:bg-white flex items-center justify-center font-bold text-xl text-white dark:text-black mb-3">
@@ -89,6 +99,10 @@ export default function Login() {
         <p className="text-xs text-zinc-500 dark:text-zinc-500 mt-6 text-center">
           Demo accounts: admin@opserp.com / Admin@12345 · ops@opserp.com / Ops@12345 · sales@opserp.com / Sales@12345
         </p>
+        <div className="text-xs text-zinc-500 dark:text-zinc-500 mt-4 flex justify-center gap-4">
+          <Link to="/terms" className="hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors">Terms of Service</Link>
+          <Link to="/privacy" className="hover:text-zinc-800 dark:hover:text-zinc-300 transition-colors">Privacy Policy</Link>
+        </div>
       </div>
     </div>
   );

@@ -1,18 +1,19 @@
 const express = require('express');
-const User = require('../models/User');
+const prisma = require('../services/prisma');
 const { protect } = require('../middleware/auth');
 const { requireRole } = require('../middleware/roles');
 
 const router = express.Router();
 
 router.use(protect);
+router.use(requireRole('ADMIN'));
 
-// Admin needs this to pick an "Assigned User" when creating a Work Order
-router.get('/', requireRole('ADMIN'), async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
-    const filter = { isActive: true };
-    if (req.query.role) filter.role = req.query.role;
-    const users = await User.find(filter).select('name email role assignedLocation');
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, assignedLocation: true, isActive: true },
+      orderBy: { name: 'asc' }
+    });
     res.json({ users });
   } catch (err) {
     next(err);
