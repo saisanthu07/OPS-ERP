@@ -1,0 +1,66 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Mini Operations ERP API",
+    "version": "1.0.0",
+    "description": "Inventory → Work Order → Stock Check → Internal Transfer / Shortage → Customer Reservation"
+  },
+  "servers": [{ "url": "/api" }],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
+    }
+  },
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "properties": { "email": { "type": "string" }, "password": { "type": "string" } } } } }
+        },
+        "responses": { "200": { "description": "Access token + user" }, "401": { "description": "Invalid credentials" } }
+      }
+    },
+    "/auth/refresh": { "post": { "summary": "Refresh access token using httpOnly cookie", "security": [], "responses": { "200": { "description": "New access token" } } } },
+    "/auth/logout": { "post": { "summary": "Logout and invalidate refresh token", "responses": { "200": { "description": "Logged out" } } } },
+    "/auth/me": { "get": { "summary": "Get current user", "responses": { "200": { "description": "Current user" } } } },
+    "/auth/register": { "post": { "summary": "Create a user (Admin only)", "responses": { "201": { "description": "User created" } } } },
+
+    "/inventory": {
+      "get": { "summary": "List inventory (filters: item, location, category)", "responses": { "200": { "description": "OK" } } },
+      "post": { "summary": "Create / stock-in inventory (Admin, Operations)", "responses": { "201": { "description": "Created" } } }
+    },
+    "/inventory/{id}": { "get": { "summary": "Get inventory record", "responses": { "200": { "description": "OK" } } } },
+    "/inventory/{id}/damage": { "post": { "summary": "Mark stock as damaged (Admin, Operations)", "responses": { "200": { "description": "OK" } } } },
+    "/inventory/{id}/transactions": { "get": { "summary": "Inventory transaction ledger", "responses": { "200": { "description": "OK" } } } },
+
+    "/work-orders": {
+      "get": { "summary": "List work orders", "responses": { "200": { "description": "OK" } } },
+      "post": { "summary": "Create a work order with automatic stock/shortage check (Admin only)", "responses": { "201": { "description": "Created" } } }
+    },
+    "/work-orders/{id}": { "get": { "summary": "Get a work order", "responses": { "200": { "description": "OK" } } } },
+    "/work-orders/{id}/stock-check": { "get": { "summary": "Re-run stock/shortage check", "responses": { "200": { "description": "OK" } } } },
+    "/work-orders/{id}/status": { "patch": { "summary": "Update work order status", "responses": { "200": { "description": "OK" } } } },
+
+    "/transfers": {
+      "get": { "summary": "List transfers", "responses": { "200": { "description": "OK" } } },
+      "post": { "summary": "Request a transfer (Admin, Operations)", "responses": { "201": { "description": "Created" } } }
+    },
+    "/transfers/{id}": { "get": { "summary": "Get a transfer", "responses": { "200": { "description": "OK" } } } },
+    "/transfers/{id}/dispatch": { "post": { "summary": "Dispatch a transfer: reduces source inventory atomically", "responses": { "200": { "description": "OK" } } } },
+    "/transfers/{id}/receive": { "post": { "summary": "Receive a transfer (supports partial receipt); increases destination inventory. Cannot be received twice.", "responses": { "200": { "description": "OK" } } } },
+
+    "/orders": {
+      "get": { "summary": "List customer orders", "responses": { "200": { "description": "OK" } } },
+      "post": { "summary": "Create an order and reserve stock atomically (Admin, Sales)", "responses": { "201": { "description": "Created" } } }
+    },
+    "/orders/{id}": { "get": { "summary": "Get an order", "responses": { "200": { "description": "OK" } } } },
+    "/orders/{id}/cancel": { "post": { "summary": "Cancel an order and release reserved inventory", "responses": { "200": { "description": "OK" } } } },
+    "/orders/{id}/fulfill": { "post": { "summary": "Fulfill an order (ship reserved stock)", "responses": { "200": { "description": "OK" } } } },
+
+    "/users": { "get": { "summary": "List active users (Admin only)", "responses": { "200": { "description": "OK" } } } }
+  }
+}
