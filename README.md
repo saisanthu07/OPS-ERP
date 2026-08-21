@@ -317,3 +317,28 @@ work orders → transfers → orders → frontend → tests → docs) rather tha
 single commit, per the assignment's git history requirement.
 
 
+---
+
+## 13. Deploying to Vercel
+
+This repository is optimized for Vercel deployment by splitting it into two separate projects (Backend and Frontend).
+
+### Deploying the Backend
+1. Go to Vercel and **Add New Project**.
+2. Import this repository.
+3. Set the **Root Directory** to ackend.
+4. In **Environment Variables**, add:
+   - DATABASE_URL (your PostgreSQL connection string)
+   - JWT_ACCESS_SECRET
+   - JWT_REFRESH_SECRET
+   - CLIENT_URL (set this to your frontend URL once deployed, for CORS)
+5. Click **Deploy**. Vercel will use the ackend/api/index.js serverless function and ercel.json routing automatically.
+
+### Deploying the Frontend
+1. Go to Vercel and **Add New Project**.
+2. Import this repository again.
+3. Set the **Root Directory** to rontend.
+4. Vercel will automatically detect Vite.
+5. In **Environment Variables**, add:
+   - VITE_API_URL (set this to your newly deployed backend URL, e.g., https://my-backend.vercel.app/api)
+6. Click **Deploy**. Vercel will build the SPA and route it correctly.
